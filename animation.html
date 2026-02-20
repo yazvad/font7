@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beads + Safe Text + Slider</title>
+
+  <style>
+    @font-face{
+      font-family: "CoFoSansMono";
+      src: url("./CoFoSansMono-Regular.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background:#000;
+      overflow:hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .wrap{
+      height:100%;
+      display:grid;
+      place-items:center;
+      position:relative;
+    }
+
+    
+    .tabs{
+    position:absolute;
+    top:18px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(720px, 92vw);
+    display:flex;
+    gap:10px;
+    z-index:10;
+    }
+    .tab{
+    flex:1;
+    text-align:center;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.06);
+    color:rgba(255,255,255,.92);
+    text-decoration:none;
+    font-size:14px;
+    backdrop-filter: blur(8px);
+    }
+    .tab.active{
+    border-color: rgba(255,255,255,.22);
+    background:rgba(255,255,255,.10);
+    }
+
+
+
+    svg{
+      width:min(1200px, 96vw);
+      height:auto;
+      display:block;
+      overflow:visible;
+    }
+
+    /* Панель снизу */
+    .ui{
+      position:absolute;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      width:min(720px, 92vw);
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(8px);
+      color:rgba(255,255,255,0.9);
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .ui .label{
+      white-space:nowrap;
+      font-size:13px;
+      opacity:0.9;
+    }
+
+    .ui input[type="range"]{
+      width:100%;
+    }
+
+    .ui .value{
+      width:44px;
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+      font-size:13px;
+      opacity:0.9;
+    }
+
+    .hint{
+        position:absolute;
+        top:66px;                 /* ниже табов */
+        left:50%;
+        transform:translateX(-50%);
+        font-size:12px;
+        color:rgba(255,255,255,0.55);
+        z-index:11;               /* выше tabs (у tabs z-index:10) */
+        pointer-events:none;      /* чтобы не мешало кликам по табам */
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="hint">F — flip текста наружу/внутрь</div>
+
+  <svg width="2427" height="1571" viewBox="0 0 2427 1571" fill="none"
+       xmlns="http://www.w3.org/2000/svg">
+
+    <!-- ЛИНИЯ -->
+    <path
+      id="track"
+      d="M1267.76 57.492C1267.59 57.492 1267.41 57.492 1202.35 57.492C1137.29 57.492 1007.35 57.492 936.205 58.252C821.888 59.4733 757.336 88.2236 720.207 95.9575C655.171 109.504 614.654 129.795 540.076 171.507C510.522 188.036 474.25 216.11 426.88 259.365C379.51 302.62 323.147 361.888 269.326 418.147C166.117 526.032 112.127 583.29 95.8456 609.998C29.9154 718.153 27.3313 742.161 19.0077 793.926C13.2465 829.754 3.70874 859.504 4.00682 880.309C5.18734 962.708 63.087 1091.39 82.7276 1127.71C92.0184 1144.89 104.5 1177.27 120.952 1217.69C132.22 1245.38 170.629 1296.92 231.411 1372.96C282.168 1436.46 336.029 1475.45 374.05 1503.27C396.961 1520.03 440.997 1535.29 504.321 1554.72C532.567 1563.38 554.118 1565.44 630.228 1565.96C706.337 1566.48 836.658 1564.32 913.569 1561.83C990.48 1559.34 1010.03 1556.59 1115.27 1550.13C1220.51 1543.66 1410.85 1533.55 1529.41 1524.46C1689.42 1512.18 1736.79 1497.6 1748.21 1493.93C1760.01 1490.13 1809.75 1475.81 1880.52 1453.08C1918.99 1440.72 1969.49 1406.15 2038.05 1357.31C2082.64 1325.54 2111.53 1292.89 2160.82 1231.66C2195.89 1188.11 2245.31 1114.49 2283.96 1062.78C2345.33 980.683 2377.61 945.135 2385.64 931.277C2391.95 920.403 2402.95 874.87 2417.21 768.685C2426.03 703.061 2422.33 611.962 2418.86 549.291C2413.6 454.271 2392.14 403.874 2375.18 371.374C2361.49 345.167 2339.27 317.786 2314.93 285.953C2294.8 259.632 2247.18 230.943 2184.3 190.454C2129.77 155.333 2099.82 127.562 2064.72 108.859C1994.5 71.4393 1927.42 42.9233 1886.24 27.1538C1865.21 19.0993 1842.79 14.0007 1790.26 9.73181C1737.72 5.4629 1655.47 2.96087 1593.99 4.41611C1435.05 8.17814 1378.85 32.3905 1346.4 38.8759C1324.22 45.0925 1308.57 48.9289 1298.21 51.4622C1292.93 53.0405 1287.63 55.2129 1281.56 58.2461"
+      stroke="white"
+      stroke-width="8"
+      stroke-linecap="round"
+      fill="none"
+    />
+
+    <g id="beads"></g>
+    <g id="textLetters"></g>
+  </svg>
+
+    <div class="ui">
+        <div class="label">Бусины</div>
+        <input id="beadRange" type="range" min="6" max="28" step="1" value="14" />
+        <div class="value" id="beadValue">14</div>
+    </div>
+    <!-- 2) ВСТАВЬ В <body> ВНУТРИ <div class="wrap"> СРАЗУ ПЕРЕД <div class="hint"> -->
+    <div class="tabs">
+        <a class="tab" href="./index.html">Текст</a>
+        <a class="tab" href="./graphics.html">Графика</a>
+        <a class="tab active" href="./animation.html">Анимация</a>
+    </div>
+  
+  
+</div>
+
+<script>
+(async () => {
+  // Ждём шрифт — иначе ширина букв будет рассчитана неправильно
+  try { await document.fonts.load('74px "CoFoSansMono"'); } catch(e){}
+
+  const path = document.getElementById("track");
+  const beadsGroup = document.getElementById("beads");
+  const textGroup  = document.getElementById("textLetters");
+
+  const range = document.getElementById("beadRange");
+  const valueEl = document.getElementById("beadValue");
+
+  const L = path.getTotalLength();
+
+  // ====== НАСТРОЙКИ (можешь крутить) ======
+  const duration = 24;            // секунд на полный круг
+  const speed = L / duration;     // px/sec вдоль path
+
+  const beadSize = 110;
+  const beadSvgs = ["red.svg", "green.svg", "blue.svg", "pink.svg", "purple.svg"];
+
+  const word = "TRUESHKOVSKIY";
+  const fontSize = 74;
+  const fontFamily = "CoFoSansMono, monospace";
+  const letterSpacing = 2;
+
+  const offsetPx = 70;            // отступ текста наружу
+  let normalSign = 1;             // если текст окажется "внутрь" — нажми F
+  const clearancePx = 24;         // запас, чтобы текст/бусины не касались
+  const minBeadGapPx = 14;        // минимальная дистанция по длине path между бусинами (доп. к радиусам)
+  // =======================================
+
+  // --- canvas для измерения букв ---
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  const letters = [...word];
+  const advances = letters.map(ch => ctx.measureText(ch).width + letterSpacing);
+  const wordLen = advances.reduce((a,b)=>a+b, 0);
+
+  // --- утилиты интервалов по длине пути ---
+  const norm = (s) => ((s % L) + L) % L;
+
+  function addInterval(intervals, a, b) {
+    a = norm(a); b = norm(b);
+    if (a <= b) intervals.push([a,b]);
+    else { intervals.push([0,b]); intervals.push([a,L]); }
+  }
+
+  function mergeIntervals(intervals) {
+    intervals.sort((x,y)=>x[0]-y[0]);
+    const out = [];
+    for (const it of intervals) {
+      if (!out.length || it[0] > out[out.length-1][1]) out.push(it);
+      else out[out.length-1][1] = Math.max(out[out.length-1][1], it[1]);
+    }
+    return out;
+  }
+
+  function invertIntervals(blocked) {
+    if (!blocked.length) return [[0, L]];
+    const gaps = [];
+    let cur = 0;
+    for (const [a,b] of blocked) {
+      if (a > cur) gaps.push([cur, a]);
+      cur = b;
+    }
+    if (cur < L) gaps.push([cur, L]);
+    return gaps;
+  }
+
+  function pointAndTangentAt(s){
+    const p = path.getPointAtLength(s);
+    const eps = 2;
+    const p2 = path.getPointAtLength((s + eps) % L);
+    const dx = p2.x - p.x;
+    const dy = p2.y - p.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { p, tx: dx/len, ty: dy/len };
+  }
+
+  // ====== DOM узлы (будем пересоздавать при изменении количества бусин) ======
+  let beadOffsets = [];
+  let beads = [];
+  let letterNodes = [];
+  let textBaseOffset = 0; // в "пикселях длины path" где старт слова в окне
+
+  function clearGroup(g){
+    while (g.firstChild) g.removeChild(g.firstChild);
+  }
+
+  function buildLetters(){
+    clearGroup(textGroup);
+    letterNodes = letters.map(ch => {
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.textContent = ch;
+      t.setAttribute("fill", "white");
+      t.setAttribute("font-size", String(fontSize));
+      t.setAttribute("font-family", fontFamily);
+      t.setAttribute("dominant-baseline", "middle");
+      t.setAttribute("text-anchor", "middle");
+      textGroup.appendChild(t);
+      return t;
+    });
+  }
+
+  function buildBeads(n){
+    clearGroup(beadsGroup);
+    beads = new Array(n).fill(0).map((_, i) => {
+      const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+      img.setAttribute("href", beadSvgs[i % beadSvgs.length]);
+      img.setAttribute("width", beadSize);
+      img.setAttribute("height", beadSize);
+      beadsGroup.appendChild(img);
+      return img;
+    });
+  }
+
+  // Генерация бусин: неравномерно + без пересечений между собой (по длине path)
+  function generateBeadOffsets(n){
+    // Хотим неровно как на референсе: берём несколько кластеров + одиночные
+    // Но при этом не допускаем наложения по длине пути.
+    const offsets = [];
+
+    // буфер для бусин по длине трека
+    const beadBuffer = (beadSize/2) + minBeadGapPx;
+
+    function canPlace(s){
+      for (const off of offsets){
+        const d = Math.abs(s - off);
+        const dd = Math.min(d, L - d);
+        if (dd < beadBuffer) return false;
+      }
+      return true;
+    }
+
+    // 1) создаём 3 кластера и немного одиночных, пока не наберём n
+    const clusters = Math.min(3, Math.max(1, Math.floor(n/6)));
+    const clusterCenters = [];
+    for (let i=0;i<clusters;i++){
+      clusterCenters.push(Math.random()*L);
+    }
+
+    // функция добавления с попытками
+    function pushWithTries(targetS){
+      for (let k=0;k<600;k++){
+        const jitter = (Math.random()-0.5) * beadBuffer * 1.2;
+        const s = norm(targetS + jitter);
+        if (canPlace(s)){
+          offsets.push(s);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // кластеры: каждые по 3-4 бусины близко
+    for (const c of clusterCenters){
+      const clusterSize = Math.min(4, Math.max(2, Math.round(n/(clusters*2))));
+      for (let j=0;j<clusterSize && offsets.length<n;j++){
+        if (!pushWithTries(c + j * (beadBuffer*0.55))) break;
+      }
+    }
+
+    // добиваем одиночными в случайных местах
+    while (offsets.length < n){
+      const s = Math.random()*L;
+      if (canPlace(s)) offsets.push(s);
+    }
+
+    // сортируем в долях 0..1 (удобнее хранить как offsets 0..1)
+    offsets.sort((a,b)=>a-b);
+    return offsets.map(s => s / L);
+  }
+
+  // Найти окно для текста так, чтобы не пересекать бусины.
+  // Если окно не находится — уменьшаем число бусин до тех пор, пока не найдётся.
+  function computeSafeTextWindow(){
+    const beadBuffer = (beadSize/2) + clearancePx;  // запретная зона вокруг бусин
+
+    let blocked = [];
+    for (const off of beadOffsets){
+      const s = off * L;
+      addInterval(blocked, s - beadBuffer, s + beadBuffer);
+    }
+    blocked = mergeIntervals(blocked);
+
+    const gaps = invertIntervals(blocked);
+    const pad = 12;                 // внутренний отступ от краёв gap
+    const need = wordLen + 2*pad;    // сколько должно "влезть"
+
+    const fits = gaps
+      .map(g => ({ a:g[0], b:g[1], len:g[1]-g[0] }))
+      .filter(g => g.len >= need)
+      .sort((x,y)=>y.len-x.len);
+
+    if (!fits.length) return null;
+
+    // ставим слово в самый длинный gap
+    const best = fits[0];
+    return best.a + pad; // это старт слова (в px длины path)
+  }
+
+  function updateCount(requestedN){
+    // пытаемся найти конфигурацию, где слово помещается "между бусин"
+    let n = requestedN;
+
+    while (n >= parseInt(range.min, 10)){
+      beadOffsets = generateBeadOffsets(n);
+      const win = computeSafeTextWindow();
+      if (win != null){
+        textBaseOffset = win;
+        buildBeads(n);
+        buildLetters();
+        valueEl.textContent = String(n);
+        range.value = String(n);
+        return;
+      }
+      n -= 1;
+    }
+
+    // если совсем не вышло — откат к минимуму
+    beadOffsets = generateBeadOffsets(parseInt(range.min, 10));
+    textBaseOffset = 0;
+    buildBeads(parseInt(range.min, 10));
+    buildLetters();
+    valueEl.textContent = range.min;
+    range.value = range.min;
+  }
+
+  // стартовое построение
+  updateCount(parseInt(range.value, 10));
+
+  // слайдер: добавляет/убирает бусины, но слово остаётся в gap
+  range.addEventListener("input", () => {
+    updateCount(parseInt(range.value, 10));
+  });
+
+  // flip наружу/внутрь
+  window.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "f") normalSign *= -1;
+  });
+
+  const t0 = performance.now();
+
+  function tick(t){
+    const dt = (t - t0) / 1000;
+
+    // --- бусины ---
+    for (let i = 0; i < beads.length; i++){
+      const s = (beadOffsets[i] * L + speed * dt) % L;
+      const p = path.getPointAtLength(s);
+      beads[i].setAttribute("x", p.x - beadSize/2);
+      beads[i].setAttribute("y", p.y - beadSize/2);
+    }
+
+    // --- текст: фиксирован в безопасном окне относительно бусин ---
+    const base = (textBaseOffset + speed * dt) % L;
+
+    let run = 0;
+    for (let i = 0; i < letterNodes.length; i++){
+      const half = advances[i] / 2;
+      const s = (base + run + half) % L;
+
+      const { p, tx, ty } = pointAndTangentAt(s);
+
+      // нормаль к кривой
+      const nx = -ty * normalSign;
+      const ny =  tx * normalSign;
+
+      // точка буквы = точка на линии + смещение наружу
+      const x = p.x + nx * offsetPx;
+      const y = p.y + ny * offsetPx;
+
+      const angle = Math.atan2(ty, tx) * 180 / Math.PI;
+
+      letterNodes[i].setAttribute("x", x);
+      letterNodes[i].setAttribute("y", y);
+      letterNodes[i].setAttribute("transform", `rotate(${angle} ${x} ${y})`);
+
+      run += advances[i];
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>

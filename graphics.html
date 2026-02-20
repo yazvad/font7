@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beaded Graphics — редактор</title>
+  <style>
+    :root{
+      --bg:#000; --fg:#fff;
+      --border: rgba(255,255,255,.15);
+      --border-strong: rgba(255,255,255,.22);
+      --panel-bg: rgba(255,255,255,.03);
+      --panel-bg-2: rgba(255,255,255,.04);
+      --input-bg: rgba(255,255,255,.06);
+      --muted: rgba(255,255,255,.65);
+      --shadow: rgba(0,0,0,.35);
+
+      --switch-track: rgba(255,255,255,.18);
+      --switch-track-on: rgba(255,255,255,.26);
+      --switch-knob: rgba(255,255,255,.90);
+
+      color-scheme: dark;
+    }
+
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      display:grid; place-items:center; min-height:100vh;
+    }
+
+    .wrap{ width:min(1200px, 94vw); }
+
+    .tabs{ display:flex; gap:10px; margin-bottom:2px; }
+    .tab{
+      flex:1;
+      text-align:center;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+      color: var(--fg);
+      text-decoration:none;
+      font-size:14px;
+    }
+    .tab.active{
+      border-color: var(--border-strong);
+      background: var(--input-bg);
+    }
+
+    .panel{
+      display:grid; gap:10px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:14px; margin-bottom:12px;
+      background: var(--panel-bg);
+      box-shadow: 0 10px 30px var(--shadow);
+    }
+
+    .top-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+
+    .label{
+      opacity:.9; font-size:14px; color: var(--fg);
+      min-width:160px;
+    }
+
+    input[type="range"]{ width:100%; flex:1; }
+
+    .num{
+      width:44px;
+      text-align:right;
+      opacity:.95;
+      color: var(--fg);
+      flex:0 0 auto;
+      margin-left:4px;
+      margin-right:6px;
+      font-weight:700;
+    }
+
+    .hintline{
+      font-size:12px;
+      color: rgba(255,255,255,.65);
+      margin-top:2px;
+    }
+
+    /* Switch */
+    .switch{
+      position:relative;
+      width:52px; height:30px;
+      flex:0 0 auto;
+    }
+    .switch input{ display:none; }
+    .slider{
+      position:absolute; inset:0;
+      border-radius:999px;
+      background: var(--switch-track);
+      border:1px solid var(--border-strong);
+      transition: .2s ease;
+    }
+    .slider:before{
+      content:"";
+      position:absolute; top:50%; left:4px;
+      width:22px; height:22px;
+      border-radius:999px;
+      transform: translateY(-50%);
+      background: var(--switch-knob);
+      transition: .2s ease;
+      box-shadow: 0 6px 16px var(--shadow);
+    }
+    .switch input:checked + .slider{
+      background: var(--switch-track-on);
+    }
+    .switch input:checked + .slider:before{
+      transform: translate(22px, -50%);
+    }
+
+    .toggleBox{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+      min-width:260px;
+    }
+    .toggleBox .left{
+      display:flex; flex-direction:column; gap:2px;
+      min-width:0; flex:1;
+    }
+    .toggleBox .title{ font-size:14px; color:var(--fg); }
+    .toggleBox .hint{ font-size:12px; color:rgba(255,255,255,.65); }
+
+    /* buttons */
+    .iconBtn{
+      width:46px; height:46px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+      display:grid; place-items:center;
+      cursor:pointer;
+      flex:0 0 auto;
+      color: var(--fg);
+      font-weight:700;
+      user-select:none;
+    }
+    .iconBtn img{ width:22px; height:22px; opacity:.95; display:block; }
+
+    .btnText{
+      width:auto;
+      padding:0 14px;
+      height:46px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+      color: var(--fg);
+      font-weight:800;
+      cursor:pointer;
+      letter-spacing:.02em;
+    }
+
+    .undoRedo { display:flex; gap:10px; flex:0 0 auto; }
+    .iconSmall{
+      width:58px; height:46px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:var(--panel-bg-2);
+      display:grid; place-items:center;
+      cursor:pointer;
+      font-size:24px;
+      line-height:1;
+      color: var(--fg);
+      user-select:none;
+    }
+
+    .stage{
+      border-radius:18px; overflow:hidden;
+      border:1px solid var(--border);
+      background: var(--bg);
+      box-shadow: 0 18px 50px var(--shadow);
+      position:relative;
+      touch-action: none;
+      min-height:420px;
+    }
+    canvas{ display:block; width:100%; height:auto; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="panel">
+      <div class="tabs">
+        <a class="tab" href="./index.html">Текст</a>
+        <a class="tab active" href="./graphics.html">Графика</a>
+        <a class="tab" href="./animation.html">Анимация</a>
+      </div>
+
+      <div class="top-row">
+        <div style="flex:1; min-width:520px; display:flex; gap:12px; align-items:center;">
+          <div class="label">Количество бусин (для следующей линии)</div>
+          <input id="beads" type="range" min="0" max="50" value="30" />
+          <div class="num"><span id="beadsVal">30</span></div>
+        </div>
+
+        <div class="undoRedo">
+          <button id="undoBtn" class="iconSmall" title="Отмена (Ctrl/Cmd+Z)">⟲</button>
+          <button id="redoBtn" class="iconSmall" title="Возврат (Ctrl/Cmd+Y)">⟳</button>
+        </div>
+
+        <button class="iconBtn" id="photoBtn" title="Добавить фото">
+          <img src="./picture.svg" alt="Add photo">
+        </button>
+        <!-- ✅ multiple -->
+        <input id="photoInput" type="file" accept="image/*" multiple hidden />
+
+        <button id="pngBtn" class="btnText" title="Сохранить PNG (прозрачный фон)">PNG</button>
+        <button id="jpgBtn" class="btnText" title="Сохранить JPG">JPG</button>
+
+        <button class="iconBtn" id="clearBtn" title="Удалить всё с холста">
+          <img src="./delete.svg" alt="Delete all">
+        </button>
+      </div>
+
+      <div class="top-row">
+        <div style="flex:1; min-width:520px; display:flex; gap:12px; align-items:center;">
+          <div class="label">Толщина линии</div>
+          <input id="strokeW" type="range" min="2" max="30" value="10" />
+          <div class="num"><span id="strokeWVal">10</span></div>
+        </div>
+
+        <div class="toggleBox" style="flex:0 0 auto;">
+          <div class="left">
+            <div class="title">Бусины</div>
+            <div class="hint"><span id="beadsModeLabel">Цветные</span></div>
+          </div>
+          <label class="switch" title="Цветные / Белые">
+            <input id="beadsMode" type="checkbox" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="hintline">
+        Рисование: зажми мышь/палец и веди. Фото: клик по фото → двигай; тяни за угол → масштаб; колёсико → масштаб.
+      </div>
+    </div>
+
+    <div class="stage">
+      <canvas id="c"></canvas>
+    </div>
+
+  </div>
+
+<script>
+  const BEAD_RADIUS = 16;
+  const BEAD_SIZE = BEAD_RADIUS * 2;
+
+  const BEAD_SVGS_COLOR = ["./blue.svg","./green.svg","./pink.svg","./purple.svg","./red.svg"];
+  const BEAD_SVG_WHITE  = "./white.svg";
+
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const beadsInp = document.getElementById("beads");
+  const beadsVal = document.getElementById("beadsVal");
+
+  const strokeWInp = document.getElementById("strokeW");
+  const strokeWVal = document.getElementById("strokeWVal");
+
+  const beadsModeInp = document.getElementById("beadsMode");
+  const beadsModeLabel = document.getElementById("beadsModeLabel");
+
+  const photoBtn = document.getElementById("photoBtn");
+  const photoInput = document.getElementById("photoInput");
+
+  const pngBtn = document.getElementById("pngBtn");
+  const jpgBtn = document.getElementById("jpgBtn");
+
+  const clearBtn = document.getElementById("clearBtn");
+
+  const undoBtn = document.getElementById("undoBtn");
+  const redoBtn = document.getElementById("redoBtn");
+
+  // ===== SVG cache =====
+  const beadImgCache = new Map();
+  function loadBeadImage(src){
+    return new Promise((resolve, reject) => {
+      if (beadImgCache.has(src)) return resolve(beadImgCache.get(src));
+      const img = new Image();
+      img.onload = () => { beadImgCache.set(src, img); resolve(img); };
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+  function pickBeadSvg(rand){
+    if (beadsModeInp.checked) return BEAD_SVG_WHITE;
+    return BEAD_SVGS_COLOR[Math.floor(rand() * BEAD_SVGS_COLOR.length)];
+  }
+
+  // ===== logical canvas size (CSS px) =====
+  let viewW = 1400;
+  let viewH = 720;
+
+  let strokes = [];
+  let drawing = false;
+  let current = [];
+
+  // ===== Photos: multiple =====
+  // photo: { img, src, x,y, scale, rotation }
+  let photos = [];
+  let activePhotoId = null; // index in photos
+
+  // interaction modes
+  let mode = "none"; // draw | photo-drag | photo-resize | photo-pinch
+  let photoDragOffset = { dx:0, dy:0 };
+  let resizeCorner = null;
+  let resizeStart = { scale:1, halfDiag:1 };
+  let pinch = { active:false, startDist:0, startScale:1, startCenter:{x:0,y:0}, startPos:{x:0,y:0} };
+
+  // ✅ улучшенная "попадаемость" по фото/хэндлам
+  const HANDLE_HIT = 22;      // зона клика по уголку (было слишком мало)
+  const PHOTO_HIT_PAD = 18;   // зона клика вокруг фото для drag/select
+
+  // undo/redo
+  const undoStack = [];
+  const redoStack = [];
+  const MAX_STACK = 80;
+
+  function mulberry32(seed){
+    return function(){
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ (t>>>15), t | 1);
+      t ^= t + Math.imul(t ^ (t>>>7), t | 61);
+      return ((t ^ (t>>>14))>>>0) / 4294967296;
+    };
+  }
+
+  function getPos(e){
+    const r = canvas.getBoundingClientRect();
+    const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    return {
+      x: (p.clientX - r.left) * (viewW / r.width),
+      y: (p.clientY - r.top)  * (viewH / r.height)
+    };
+  }
+  function getTwoTouch(e){
+    const r = canvas.getBoundingClientRect();
+    const t0 = e.touches[0], t1 = e.touches[1];
+    const p0 = { x:(t0.clientX - r.left) * (viewW/r.width), y:(t0.clientY - r.top) * (viewH/r.height) };
+    const p1 = { x:(t1.clientX - r.left) * (viewW/r.width), y:(t1.clientY - r.top) * (viewH/r.height) };
+    return { p0, p1 };
+  }
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function center(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
+
+  function polylineLength(points){
+    let len=0;
+    for (let i=1;i<points.length;i++){
+      len += Math.hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y);
+    }
+    return len;
+  }
+  function pointAt(points, d){
+    let acc=0;
+    for (let i=1;i<points.length;i++){
+      const a=points[i-1], b=points[i];
+      const seg=Math.hypot(b.x-a.x, b.y-a.y);
+      if (acc+seg >= d){
+        const t = seg===0 ? 0 : (d-acc)/seg;
+        return { x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t };
+      }
+      acc+=seg;
+    }
+    return points[points.length-1] || {x:0,y:0};
+  }
+
+  // ===== photo helpers (top-most hit) =====
+  function getPhotoRect(ph){
+    if (!ph?.img) return null;
+    const iw = ph.img.width * ph.scale;
+    const ih = ph.img.height * ph.scale;
+    const left = ph.x - iw/2;
+    const top  = ph.y - ih/2;
+    const right = left + iw;
+    const bottom = top + ih;
+    return {
+      left, top, right, bottom, iw, ih,
+      tl:{x:left,y:top}, tr:{x:right,y:top}, bl:{x:left,y:bottom}, br:{x:right,y:bottom}
+    };
+  }
+  function pointInRect(p, rect){
+    return p.x >= rect.left && p.x <= rect.right && p.y >= rect.top && p.y <= rect.bottom;
+  }
+  function pointInRectExpanded(p, rect, pad){
+    return (
+      p.x >= rect.left - pad &&
+      p.x <= rect.right + pad &&
+      p.y >= rect.top - pad &&
+      p.y <= rect.bottom + pad
+    );
+  }
+  function isPointOnCorner(p, c, s = HANDLE_HIT){
+    return (p.x >= c.x - s && p.x <= c.x + s && p.y >= c.y - s && p.y <= c.y + s);
+  }
+  function cornerHitOnPhoto(p, ph){
+    const rect = getPhotoRect(ph);
+    if (!rect) return null;
+    if (isPointOnCorner(p, rect.tl)) return "tl";
+    if (isPointOnCorner(p, rect.tr)) return "tr";
+    if (isPointOnCorner(p, rect.br)) return "br";
+    if (isPointOnCorner(p, rect.bl)) return "bl";
+    return null;
+  }
+
+  function hitTestTopPhoto(p){
+    // идём сверху вниз (последний в массиве = верхний слой)
+    for (let i = photos.length - 1; i >= 0; i--){
+      const ph = photos[i];
+      if (!ph?.img) continue;
+      const rect = getPhotoRect(ph);
+      if (rect && pointInRectExpanded(p, rect, PHOTO_HIT_PAD)){
+        return i;
+      }
+    }
+    return null;
+  }
+
+  // ===== undo/redo state =====
+  function copyState(){
+    return {
+      strokes: strokes.map(s => ({
+        beads: s.beads, seed: s.seed, w: s.w,
+        pts: s.pts.map(pt => ({x:pt.x, y:pt.y}))
+      })),
+      photos: photos.map(ph => ({
+        src: ph.src,
+        x: ph.x, y: ph.y,
+        scale: ph.scale,
+        rotation: ph.rotation
+      })),
+      activePhotoId,
+      ui: { beads:+beadsInp.value, strokeW:+strokeWInp.value, beadsMode:!!beadsModeInp.checked }
+    };
+  }
+
+  function restoreState(st){
+    strokes = st.strokes.map(s => ({
+      beads: s.beads, seed: s.seed, w: s.w,
+      pts: s.pts.map(pt => ({x:pt.x, y:pt.y}))
+    }));
+
+    if (st.ui){
+      beadsInp.value = st.ui.beads ?? beadsInp.value;
+      strokeWInp.value = st.ui.strokeW ?? strokeWInp.value;
+      beadsModeInp.checked = !!st.ui.beadsMode;
+    }
+    beadsVal.textContent = String(beadsInp.value);
+    strokeWVal.textContent = String(strokeWInp.value);
+    beadsModeLabel.textContent = beadsModeInp.checked ? "Белые" : "Цветные";
+
+    // restore photos async
+    photos = [];
+    activePhotoId = st.activePhotoId ?? null;
+
+    if (st.photos && st.photos.length){
+      const pending = st.photos.map(meta => {
+        return new Promise(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            photos.push({
+              img,
+              src: meta.src,
+              x: meta.x, y: meta.y,
+              scale: meta.scale,
+              rotation: meta.rotation
+            });
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = meta.src;
+        });
+      });
+
+      Promise.all(pending).then(() => {
+        if (activePhotoId == null || activePhotoId < 0 || activePhotoId >= photos.length){
+          activePhotoId = photos.length ? (photos.length - 1) : null;
+        }
+        redraw();
+      });
+    } else {
+      redraw();
+    }
+  }
+
+  function pushState(){
+    undoStack.push(copyState());
+    if (undoStack.length > MAX_STACK) undoStack.shift();
+    redoStack.length = 0;
+    updateUndoRedo();
+  }
+  function updateUndoRedo(){
+    undoBtn.disabled = undoStack.length === 0;
+    redoBtn.disabled = redoStack.length === 0;
+    undoBtn.style.opacity = undoBtn.disabled ? 0.45 : 1;
+    redoBtn.style.opacity = redoBtn.disabled ? 0.45 : 1;
+  }
+  function undo(){
+    if (undoStack.length === 0) return;
+    const cur = copyState();
+    redoStack.push(cur);
+    const prev = undoStack.pop();
+    restoreState(prev);
+    updateUndoRedo();
+  }
+  function redo(){
+    if (redoStack.length === 0) return;
+    const cur = copyState();
+    undoStack.push(cur);
+    const next = redoStack.pop();
+    restoreState(next);
+    updateUndoRedo();
+  }
+
+  // ===== draw =====
+  function drawBackground(isTransparent=false){
+    ctx.clearRect(0,0,viewW,viewH);
+    if (!isTransparent){
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0,0,viewW,viewH);
+    }
+  }
+
+  function drawOnePhoto(ph){
+    ctx.save();
+    ctx.translate(ph.x, ph.y);
+    ctx.rotate(ph.rotation);
+    ctx.scale(ph.scale, ph.scale);
+    ctx.drawImage(ph.img, -ph.img.width/2, -ph.img.height/2);
+    ctx.restore();
+  }
+
+  function drawPhotoUI(ph){
+    const rect = getPhotoRect(ph);
+    if (!rect) return;
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,6]);
+    ctx.strokeRect(rect.left, rect.top, rect.iw, rect.ih);
+    ctx.setLineDash([]);
+
+    const corners = [rect.tl, rect.tr, rect.br, rect.bl];
+    for (const c of corners){
+      ctx.fillStyle = "#111";
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.rect(c.x-8, c.y-8, 16, 16);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawStroke(points, w){
+    if (points.length < 2) return;
+
+    ctx.lineWidth = w;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#fff";
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 1; i < points.length - 1; i++) {
+      const cx = points[i].x;
+      const cy = points[i].y;
+      const mx = (points[i].x + points[i + 1].x) / 2;
+      const my = (points[i].y + points[i + 1].y) / 2;
+      ctx.quadraticCurveTo(cx, cy, mx, my);
+    }
+
+    const last = points[points.length - 1];
+    ctx.lineTo(last.x, last.y);
+    ctx.stroke();
+  }
+
+  async function drawBeadsOnStroke(points, count, seedBase){
+    const total = polylineLength(points);
+    if (total <= 1 || count <= 0) return;
+
+    const rand = mulberry32(seedBase);
+    const pad = total * 0.06;
+    const start = pad;
+    const end = Math.max(start+1, total - pad);
+    const span = end - start;
+
+    const sources = [];
+    for (let i=0;i<count;i++) sources.push(pickBeadSvg(rand));
+    const imgs = await Promise.all(sources.map(src => loadBeadImage(src).catch(()=>null)));
+
+    const rand2 = mulberry32(seedBase);
+
+    for (let i=0;i<count;i++){
+      const t = (count===1) ? 0.5 : i/(count-1);
+      const jitter = (rand2()-0.5)*0.08;
+      const d = start + span * Math.min(1, Math.max(0, t + jitter));
+      const p = pointAt(points, d);
+
+      const img = imgs[i];
+      if (!img) continue;
+
+      ctx.drawImage(img, p.x - BEAD_RADIUS, p.y - BEAD_RADIUS, BEAD_SIZE, BEAD_SIZE);
+    }
+  }
+
+  let renderToken = 0;
+  async function redraw(opts={transparent:false, hideUI:false}){
+    const token = ++renderToken;
+
+    const beadCountNext = parseInt(beadsInp.value, 10);
+    beadsVal.textContent = String(beadCountNext);
+
+    const wNow = parseInt(strokeWInp.value, 10);
+    strokeWVal.textContent = String(wNow);
+
+    beadsModeLabel.textContent = beadsModeInp.checked ? "Белые" : "Цветные";
+
+    drawBackground(!!opts.transparent);
+
+    for (let i=0;i<photos.length;i++){
+      const ph = photos[i];
+      if (!ph?.img) continue;
+      drawOnePhoto(ph);
+    }
+
+    if (!opts.hideUI && activePhotoId != null && photos[activePhotoId]?.img){
+      drawPhotoUI(photos[activePhotoId]);
+    }
+
+    for (let i=0;i<strokes.length;i++){
+      if (token !== renderToken) return;
+      const s = strokes[i];
+      drawStroke(s.pts, s.w);
+      await drawBeadsOnStroke(s.pts, s.beads, s.seed);
+    }
+
+    if (drawing && current.length>1){
+      if (token !== renderToken) return;
+      drawStroke(current, wNow);
+      await drawBeadsOnStroke(current, beadCountNext, 999999);
+    }
+  }
+
+  // ===== interactions =====
+  function startPointer(e){
+    if (e.touches && e.touches.length === 2 && activePhotoId != null && photos[activePhotoId]?.img){
+      e.preventDefault();
+      const ph = photos[activePhotoId];
+      const {p0,p1} = getTwoTouch(e);
+      pinch.active = true;
+      pinch.startDist = dist(p0,p1);
+      pinch.startScale = ph.scale;
+      pinch.startCenter = center(p0,p1);
+      pinch.startPos = { x: ph.x, y: ph.y };
+      mode = "photo-pinch";
+      pushState();
+      return;
+    }
+
+    const p = getPos(e);
+
+    const hitId = hitTestTopPhoto(p);
+    if (hitId != null){
+      if (hitId !== photos.length - 1){
+        const ph = photos.splice(hitId, 1)[0];
+        photos.push(ph);
+        activePhotoId = photos.length - 1;
+      } else {
+        activePhotoId = hitId;
+      }
+
+      const ph = photos[activePhotoId];
+
+      // ✅ сначала уголки (и они "шире" по hitbox)
+      const c = cornerHitOnPhoto(p, ph);
+      if (c){
+        e.preventDefault();
+        mode = "photo-resize";
+        resizeCorner = c;
+        const rect = getPhotoRect(ph);
+        resizeStart.scale = ph.scale;
+        resizeStart.halfDiag = rect ? Math.hypot(rect.iw/2, rect.ih/2) : 1;
+        pushState();
+        redraw();
+        return;
+      }
+
+      // ✅ потом drag (с паддингом уже в hitTestTopPhoto)
+      e.preventDefault();
+      mode = "photo-drag";
+      photoDragOffset.dx = p.x - ph.x;
+      photoDragOffset.dy = p.y - ph.y;
+      pushState();
+      redraw();
+      return;
+    }
+
+    e.preventDefault();
+    mode = "draw";
+    drawing = true;
+    current = [p];
+    redraw();
+  }
+
+  function movePointer(e){
+    if (mode === "photo-pinch" && e.touches && e.touches.length === 2 && activePhotoId != null && photos[activePhotoId]?.img){
+      e.preventDefault();
+      const ph = photos[activePhotoId];
+      const {p0,p1} = getTwoTouch(e);
+      const d = dist(p0,p1);
+      const c = center(p0,p1);
+
+      const k = (pinch.startDist === 0) ? 1 : (d / pinch.startDist);
+      ph.scale = Math.max(0.05, Math.min(10, pinch.startScale * k));
+
+      const dx = c.x - pinch.startCenter.x;
+      const dy = c.y - pinch.startCenter.y;
+      ph.x = pinch.startPos.x + dx;
+      ph.y = pinch.startPos.y + dy;
+
+      redraw();
+      return;
+    }
+
+    if (mode === "photo-drag" && activePhotoId != null && photos[activePhotoId]?.img){
+      e.preventDefault();
+      const ph = photos[activePhotoId];
+      const p = getPos(e);
+      ph.x = p.x - photoDragOffset.dx;
+      ph.y = p.y - photoDragOffset.dy;
+      redraw();
+      return;
+    }
+
+    if (mode === "photo-resize" && activePhotoId != null && photos[activePhotoId]?.img){
+      e.preventDefault();
+      const ph = photos[activePhotoId];
+      const p = getPos(e);
+      const dx = Math.abs(p.x - ph.x);
+      const dy = Math.abs(p.y - ph.y);
+      const halfDiagNew = Math.hypot(dx, dy);
+      const k = (resizeStart.halfDiag === 0) ? 1 : (halfDiagNew / resizeStart.halfDiag);
+      ph.scale = Math.max(0.05, Math.min(10, resizeStart.scale * k));
+      redraw();
+      return;
+    }
+
+    if (mode === "draw"){
+      e.preventDefault();
+      const p = getPos(e);
+      const last = current[current.length-1];
+      const SMOOTH_STEP = 3;
+      if (!last || Math.hypot(p.x-last.x, p.y-last.y) > SMOOTH_STEP){
+        current.push(p);
+        redraw();
+      }
+    }
+  }
+
+  function endPointer(){
+    if (mode === "draw" && drawing){
+      drawing = false;
+      if (current.length > 1){
+        const pts = current.map(pt => ({x:pt.x, y:pt.y}));
+        const beadsNow = parseInt(beadsInp.value, 10);
+        const wNow = parseInt(strokeWInp.value, 10);
+        const seed = 12345 + strokes.length * 999;
+        strokes.push({ pts, beads: beadsNow, seed, w: wNow });
+        pushState();
+      }
+      current = [];
+    }
+    pinch.active = false;
+    mode = "none";
+    resizeCorner = null;
+    redraw();
+  }
+
+  canvas.addEventListener("wheel", (e) => {
+    if (!photos.length) return;
+    const p = getPos(e);
+    const hitId = hitTestTopPhoto(p);
+    if (hitId == null) return;
+
+    if (hitId !== photos.length - 1){
+      const ph = photos.splice(hitId, 1)[0];
+      photos.push(ph);
+      activePhotoId = photos.length - 1;
+    } else {
+      activePhotoId = hitId;
+    }
+
+    const ph = photos[activePhotoId];
+    const rect = getPhotoRect(ph);
+    if (!rect || !pointInRectExpanded(p, rect, PHOTO_HIT_PAD)) return;
+
+    e.preventDefault();
+
+    const delta = -e.deltaY;
+    const factor = Math.exp(delta * 0.0018);
+
+    const prev = ph.scale;
+    const next = Math.max(0.05, Math.min(10, prev * factor));
+    const k = next / prev;
+
+    ph.x = p.x - (p.x - ph.x) * k;
+    ph.y = p.y - (p.y - ph.y) * k;
+    ph.scale = next;
+
+    pushState();
+    redraw();
+  }, { passive:false });
+
+  canvas.addEventListener("mousedown", startPointer);
+  window.addEventListener("mousemove", movePointer);
+  window.addEventListener("mouseup", endPointer);
+
+  canvas.addEventListener("touchstart", startPointer, { passive:false });
+  window.addEventListener("touchmove", movePointer, { passive:false });
+  window.addEventListener("touchend", endPointer, { passive:false });
+  window.addEventListener("touchcancel", endPointer, { passive:false });
+
+  // ===== UI =====
+  beadsInp.addEventListener("input", () => redraw());
+  strokeWInp.addEventListener("input", () => redraw());
+  beadsModeInp.addEventListener("change", () => redraw());
+
+  // photo upload (multiple)
+  photoBtn.addEventListener("click", () => {
+    photoInput.value = "";
+    photoInput.click();
+  });
+
+  function addPhotoFromFile(file, offsetIndex=0){
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = () => {
+        const target = Math.min(viewW, viewH) * 0.6;
+        const s = target / Math.max(img.width, img.height);
+
+        const ph = {
+          img,
+          src: url,           // keep blob url for undo/redo within session
+          x: viewW/2 + offsetIndex*24,
+          y: viewH/2 + offsetIndex*24,
+          scale: Math.max(0.05, Math.min(10, s)),
+          rotation: 0
+        };
+
+        photos.push(ph);
+        activePhotoId = photos.length - 1;
+
+        resolve();
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+
+      img.src = url;
+    });
+  }
+
+  photoInput.addEventListener("change", async () => {
+    const files = photoInput.files ? Array.from(photoInput.files) : [];
+    if (!files.length) return;
+
+    pushState();
+
+    for (let i=0;i<files.length;i++){
+      await addPhotoFromFile(files[i], i);
+    }
+
+    redraw();
+  });
+
+  // save
+  function downloadDataUrl(dataUrl, filename){
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  async function savePNG(){
+    await redraw({ transparent:true, hideUI:true });
+    const dataUrl = canvas.toDataURL("image/png");
+    downloadDataUrl(dataUrl, "beaded-graphics.png");
+    redraw();
+  }
+
+  async function saveJPG(){
+    await redraw({ transparent:false, hideUI:true });
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    downloadDataUrl(dataUrl, "beaded-graphics.jpg");
+    redraw();
+  }
+
+  pngBtn.addEventListener("click", savePNG);
+  jpgBtn.addEventListener("click", saveJPG);
+
+  // clear
+  function clearAll(){
+    pushState();
+    strokes = [];
+    drawing = false;
+    current = [];
+    photos = [];
+    activePhotoId = null;
+    redraw();
+  }
+  clearBtn.addEventListener("click", clearAll);
+
+  // undo/redo
+  undoBtn.addEventListener("click", undo);
+  redoBtn.addEventListener("click", redo);
+
+  window.addEventListener("keydown", (e) => {
+    const isMac = navigator.platform.toUpperCase().includes("MAC");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (!mod) return;
+
+    const key = e.key.toLowerCase();
+    if (key === "z" && !e.shiftKey){
+      e.preventDefault(); undo();
+    } else if (key === "y" || (key === "z" && e.shiftKey)){
+      e.preventDefault(); redo();
+    }
+  });
+
+  // resize
+  function resizeCanvas(){
+    const stage = canvas.parentElement;
+    const r = stage.getBoundingClientRect();
+
+    viewW = Math.max(600, Math.floor(r.width));
+    viewH = Math.max(360, Math.floor(r.width * (720/1400)));
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = Math.floor(viewW * dpr);
+    canvas.height = Math.floor(viewH * dpr);
+    canvas.style.width  = viewW + "px";
+    canvas.style.height = viewH + "px";
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    redraw();
+  }
+  window.addEventListener("resize", resizeCanvas);
+
+  // init
+  beadsVal.textContent = String(beadsInp.value);
+  strokeWVal.textContent = String(strokeWInp.value);
+  beadsModeLabel.textContent = beadsModeInp.checked ? "Белые" : "Цветные";
+
+  updateUndoRedo();
+  resizeCanvas();
+  pushState();
+  redraw();
+</script>
+
+</body>
+</html>

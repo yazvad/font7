@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beaded Font (opentype.js)</title>
+
+  <style>
+    :root{
+      --bg: #000;
+      --fg: #fff;
+      --border: rgba(255,255,255,.15);
+      --border-strong: rgba(255,255,255,.22);
+      --panel-bg: rgba(255,255,255,.03);
+      --panel-bg-2: rgba(255,255,255,.04);
+      --input-bg: rgba(255,255,255,.06);
+      --muted: rgba(255,255,255,.65);
+      --hint: rgba(255,255,255,.55);
+      --shadow: rgba(0,0,0,.35);
+
+      --switch-track: rgba(255,255,255,.18);
+      --switch-track-on: rgba(255,255,255,.26);
+      --switch-knob: rgba(255,255,255,.90);
+
+      color-scheme: dark;
+    }
+
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      display:grid; place-items:center; min-height:100vh;
+    }
+
+    .wrap{ width:min(1200px, 94vw); }
+
+    .tabs{ display:flex; gap:10px; margin-bottom:2px; }
+    .tab{
+      flex:1;
+      text-align:center;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+      color: var(--fg);
+      text-decoration:none;
+      font-size:14px;
+    }
+    .tab.active{
+      border-color: var(--border-strong);
+      background: var(--input-bg);
+    }
+
+    .panel{
+      display:grid; gap:10px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:14px; margin-bottom:12px;
+      background: var(--panel-bg);
+      box-shadow: 0 10px 30px var(--shadow);
+    }
+    
+
+    .row{ display:flex; gap:12px; align-items:center; }
+    .row > * { flex: 1; }
+
+    .label{ opacity:.9; font-size:14px; color: var(--fg); }
+
+    input[type="text"]{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border-strong);
+      background: var(--input-bg);
+      color: var(--fg);
+      outline:none;
+    }
+    input[type="text"]::placeholder{ color: var(--hint); }
+
+    input[type="range"]{ width:100%; }
+
+    .num{ width:70px; text-align:right; flex:0 0 auto; opacity:.9; color: var(--fg); }
+
+    .toggles{
+      display:flex; gap:10px; flex-wrap:wrap;
+      justify-content: space-between;
+    }
+
+    .toggle{
+      flex: 1 1 260px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+    }
+
+    .toggle .left{
+      display:flex; flex-direction:column; gap:2px;
+      min-width: 0;
+    }
+    .toggle .title{ font-size:14px; color: var(--fg); }
+    .toggle .hint{ font-size:12px; color: var(--muted); }
+
+    .switch{
+      position:relative;
+      width:52px; height:30px;
+      flex:0 0 auto;
+    }
+    .switch input{ display:none; }
+    .slider{
+      position:absolute; inset:0;
+      border-radius:999px;
+      background: var(--switch-track);
+      border:1px solid var(--border-strong);
+      transition: .2s ease;
+    }
+    .slider:before{
+      content:"";
+      position:absolute; top:50%; left:4px;
+      width:22px; height:22px;
+      border-radius:999px;
+      transform: translateY(-50%);
+      background: var(--switch-knob);
+      transition: .2s ease;
+      box-shadow: 0 6px 16px var(--shadow);
+    }
+    .switch input:checked + .slider{
+      background: var(--switch-track-on);
+    }
+    .switch input:checked + .slider:before{
+      transform: translate(22px, -50%);
+    }
+
+    /* ✅ ADDED: export buttons style */
+    .btnText{
+      width:auto;
+      padding:0 14px;
+      height:46px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-bg-2);
+      color: var(--fg);
+      font-weight:800;
+      cursor:pointer;
+      letter-spacing:.02em;
+      flex:0 0 auto;
+    }
+
+    .stage{
+      border-radius:18px; overflow:hidden;
+      border:1px solid var(--border);
+      background: var(--bg);
+      box-shadow: 0 18px 50px var(--shadow);
+    }
+    svg{ width:100%; height:auto; display:block; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="tabs">
+        <a class="tab active" href="./index.html">Текст</a>
+        <a class="tab" href="./graphics.html">Графика</a>
+        <a class="tab" href="./animation.html">Анимация</a>
+      </div>
+
+      <div class="row">
+        <div class="label">Текст</div>
+        <input id="text" type="text" value="jewelry" />
+      </div>
+
+      <div class="row">
+        <div class="label">Размер текста</div>
+        <input id="size" type="range" min="60" max="260" value="180" />
+        <div class="num"><span id="sizeVal">180</span></div>
+      </div>
+
+      <div class="row">
+        <div class="label">Количество бусин</div>
+        <input id="beads" type="range" min="0" max="260" value="20" />
+        <div class="num"><span id="beadsVal">20</span></div>
+      </div>
+
+      <div class="toggles">
+        <div class="toggle">
+          <div class="left">
+            <div class="title">Бусины</div>
+            <div class="hint"><span id="beadsModeLabel">Цветные</span></div>
+          </div>
+          <label class="switch" title="Цветные / Белые">
+            <input id="beadsMode" type="checkbox" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle">
+          <div class="left">
+            <div class="title">Цвет текста</div>
+            <div class="hint"><span id="textModeLabel">Белый текст · чёрный фон</span></div>
+          </div>
+          <label class="switch" title="Белый / Чёрный текст (фон меняется автоматически)">
+            <input id="textMode" type="checkbox" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- ✅ ADDED: export buttons row -->
+      <div class="row" style="gap:10px;">
+        <button id="pngBtn" class="btnText" title="Сохранить PNG (прозрачный фон)">PNG</button>
+        <button id="jpgBtn" class="btnText" title="Сохранить JPG">JPG</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <svg id="svg" viewBox="0 0 1400 520" xmlns="http://www.w3.org/2000/svg">
+        <rect id="bg" width="1400" height="520" fill="#000"/>
+        <path id="fillPath" fill="#fff" stroke="none"></path>
+        <g id="beadsLayer"></g>
+      </svg>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/opentype.js@1.3.4/dist/opentype.min.js"></script>
+  <script>
+    const FONT_URL = "./Nitinew-Regular.ttf";
+    const TRACKING = -10; // отрицательное = буквы ближе
+
+    const BEAD_SVGS_COLOR = ["./blue.svg","./green.svg","./pink.svg","./purple.svg","./red.svg"];
+    const BEAD_SVG_WHITE  = "./white.svg";
+
+    const BEAD_RADIUS = 13;
+    const BEAD_SIZE = BEAD_RADIUS * 2;
+
+    const root = document.documentElement;
+
+    const bg = document.getElementById("bg");
+    const fillPath = document.getElementById("fillPath");
+    const beadsLayer = document.getElementById("beadsLayer");
+
+    const textInp = document.getElementById("text");
+    const sizeInp = document.getElementById("size");
+    const beadsInp = document.getElementById("beads");
+
+    const beadsModeInp = document.getElementById("beadsMode");
+    const textModeInp  = document.getElementById("textMode");
+
+    const sizeVal = document.getElementById("sizeVal");
+    const beadsVal = document.getElementById("beadsVal");
+    const beadsModeLabel = document.getElementById("beadsModeLabel");
+    const textModeLabel = document.getElementById("textModeLabel");
+
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    let font = null;
+
+    function setTheme(isLight){
+      if (isLight){
+        root.style.setProperty("--bg", "#fff");
+        root.style.setProperty("--fg", "#000");
+        root.style.setProperty("--border", "rgba(0,0,0,.15)");
+        root.style.setProperty("--border-strong", "rgba(0,0,0,.22)");
+        root.style.setProperty("--panel-bg", "rgba(0,0,0,.03)");
+        root.style.setProperty("--panel-bg-2", "rgba(0,0,0,.04)");
+        root.style.setProperty("--input-bg", "rgba(0,0,0,.06)");
+        root.style.setProperty("--muted", "rgba(0,0,0,.65)");
+        root.style.setProperty("--hint", "rgba(0,0,0,.55)");
+        root.style.setProperty("--shadow", "rgba(0,0,0,.10)");
+
+        root.style.setProperty("--switch-track", "rgba(0,0,0,.12)");
+        root.style.setProperty("--switch-track-on", "rgba(0,0,0,.18)");
+        root.style.setProperty("--switch-knob", "rgba(0,0,0,.85)");
+        root.style.colorScheme = "light";
+      } else {
+        root.style.setProperty("--bg", "#000");
+        root.style.setProperty("--fg", "#fff");
+        root.style.setProperty("--border", "rgba(255,255,255,.15)");
+        root.style.setProperty("--border-strong", "rgba(255,255,255,.22)");
+        root.style.setProperty("--panel-bg", "rgba(255,255,255,.03)");
+        root.style.setProperty("--panel-bg-2", "rgba(255,255,255,.04)");
+        root.style.setProperty("--input-bg", "rgba(255,255,255,.06)");
+        root.style.setProperty("--muted", "rgba(255,255,255,.65)");
+        root.style.setProperty("--hint", "rgba(255,255,255,.55)");
+        root.style.setProperty("--shadow", "rgba(0,0,0,.35)");
+
+        root.style.setProperty("--switch-track", "rgba(255,255,255,.18)");
+        root.style.setProperty("--switch-track-on", "rgba(255,255,255,.26)");
+        root.style.setProperty("--switch-knob", "rgba(255,255,255,.90)");
+        root.style.colorScheme = "dark";
+      }
+    }
+
+    function applyTheme() {
+      const isLight = textModeInp.checked;
+      const textColor = isLight ? "#000" : "#fff";
+      const bgColor   = isLight ? "#fff" : "#000";
+
+      setTheme(isLight);
+
+      bg.setAttribute("fill", bgColor);
+
+      // заливка текста
+      fillPath.setAttribute("fill", textColor);
+
+      // небольшая обводка текста (адаптируется под тему)
+      fillPath.setAttribute("stroke", textColor);
+      fillPath.setAttribute("stroke-width", "1.5"); 
+      fillPath.setAttribute("stroke-linejoin", "round");
+
+
+      textModeLabel.textContent = isLight ? "Чёрный текст · белый фон" : "Белый текст · чёрный фон";
+      beadsModeLabel.textContent = beadsModeInp.checked ? "Белые" : "Цветные";
+    }
+
+    function buildPathData(text, fontSize) {
+      const x0 = 60;
+      const y0 = 360;
+
+      let x = x0;
+      const p = new opentype.Path();
+
+      for (const ch of (text || "")) {
+        const glyph = font.charToGlyph(ch);
+        const glyphPath = glyph.getPath(x, y0, fontSize);
+        p.extend(glyphPath);
+
+        const advance = (glyph.advanceWidth || font.unitsPerEm) * (fontSize / font.unitsPerEm);
+        x += advance + TRACKING;
+      }
+
+      const d = p.toPathData(3);
+
+      const bbox = p.getBoundingBox();
+      const targetCenterX = 700;
+      const currentCenterX = (bbox.x1 + bbox.x2) / 2;
+      const dx = targetCenterX - currentCenterX;
+
+      return { d, dx };
+    }
+
+    function pickBeadSvg(rand){
+      if (beadsModeInp.checked) return BEAD_SVG_WHITE;
+      return BEAD_SVGS_COLOR[Math.floor(rand() * BEAD_SVGS_COLOR.length)];
+    }
+
+    function renderBeads(count, seed = 12345) {
+      beadsLayer.innerHTML = "";
+      beadsVal.textContent = String(count);
+
+      const total = fillPath.getTotalLength();
+      if (count <= 0 || !isFinite(total) || total <= 0) return;
+
+      const rand = mulberry32(seed);
+      const pad = total * 0.06;
+      const start = pad;
+      const end = Math.max(start + 1, total - pad);
+      const span = end - start;
+
+      for (let i = 0; i < count; i++) {
+        const t = (count === 1) ? 0.5 : i / (count - 1);
+        const jitter = (rand() - 0.5) * 0.08;
+        const dist = start + span * Math.min(1, Math.max(0, t + jitter));
+        const pt = fillPath.getPointAtLength(dist);
+
+        const href = pickBeadSvg(rand);
+
+        const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        img.setAttribute("x", (pt.x - BEAD_RADIUS).toFixed(2));
+        img.setAttribute("y", (pt.y - BEAD_RADIUS).toFixed(2));
+        img.setAttribute("width", BEAD_SIZE);
+        img.setAttribute("height", BEAD_SIZE);
+        img.setAttribute("href", href);
+        img.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+        img.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        beadsLayer.appendChild(img);
+      }
+    }
+
+    function rerender() {
+      if (!font) return;
+
+      applyTheme();
+
+      const text = textInp.value || "";
+      const fontSize = parseInt(sizeInp.value, 10);
+      const beadCount = parseInt(beadsInp.value, 10);
+
+      sizeVal.textContent = String(fontSize);
+
+      const { d, dx } = buildPathData(text, fontSize);
+
+      fillPath.setAttribute("d", d);
+      fillPath.setAttribute("transform", `translate(${dx},0)`);
+      beadsLayer.setAttribute("transform", `translate(${dx},0)`);
+
+      renderBeads(beadCount);
+    }
+
+    opentype.load(FONT_URL, function(err, loadedFont) {
+      if (err) {
+        console.error(err);
+        alert("Не загрузился шрифт. Проверь файл и запускай через локальный сервер.");
+        return;
+      }
+      font = loadedFont;
+      rerender();
+    });
+
+    textInp.addEventListener("input", rerender);
+    sizeInp.addEventListener("input", rerender);
+    beadsInp.addEventListener("input", rerender);
+    beadsModeInp.addEventListener("change", rerender);
+    textModeInp.addEventListener("change", rerender);
+
+    applyTheme();
+
+    // ✅ Export PNG/JPG (fix: inline bead svgs)
+const svgEl = document.getElementById("svg");
+const pngBtn = document.getElementById("pngBtn");
+const jpgBtn = document.getElementById("jpgBtn");
+
+function downloadDataUrl(dataUrl, filename){
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function toDataUrlSvgText(svgText){
+  // base64 для svg (UTF-8 safe)
+  const encoded = btoa(unescape(encodeURIComponent(svgText)));
+  return `data:image/svg+xml;base64,${encoded}`;
+}
+
+function resolveUrl(href){
+  // делает абсолютный путь (важно для ./blue.svg)
+  return new URL(href, window.location.href).toString();
+}
+
+async function inlineExternalImages(clone){
+  const imgs = Array.from(clone.querySelectorAll("image"));
+
+  await Promise.all(imgs.map(async (node) => {
+    // href может быть и в href, и в xlink:href
+    const href =
+      node.getAttribute("href") ||
+      node.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+
+    if (!href) return;
+
+    // уже data: — не трогаем
+    if (href.startsWith("data:")) return;
+
+    try{
+      const abs = resolveUrl(href);
+      const res = await fetch(abs, { cache: "no-store" });
+      if (!res.ok) throw new Error("fetch failed");
+      const svgText = await res.text();
+
+      const dataUrl = toDataUrlSvgText(svgText);
+      node.setAttribute("href", dataUrl);
+      node.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", dataUrl);
+    } catch (e){
+      console.warn("Не удалось встроить ассет:", href, e);
+    }
+  }));
+}
+
+async function svgToCanvas({transparent=false} = {}){
+  const clone = svgEl.cloneNode(true);
+
+  // фон
+  const bgRect = clone.querySelector("#bg");
+  if (bgRect && transparent){
+    bgRect.setAttribute("fill", "transparent");
+  }
+
+  // ✅ ВАЖНО: вшиваем бусины (внешние svg)
+  await inlineExternalImages(clone);
+
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const svgString = new XMLSerializer().serializeToString(clone);
+  const svgBlob = new Blob(
+    [`<?xml version="1.0" encoding="UTF-8"?>\n${svgString}`],
+    { type: "image/svg+xml;charset=utf-8" }
+  );
+  const url = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+  img.decoding = "async";
+
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = url;
+  });
+
+  URL.revokeObjectURL(url);
+
+  const vb = svgEl.viewBox.baseVal;
+  const w = Math.max(1, Math.floor(vb && vb.width ? vb.width : svgEl.clientWidth));
+  const h = Math.max(1, Math.floor(vb && vb.height ? vb.height : svgEl.clientHeight));
+
+  const canvas = document.createElement("canvas");
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+
+  const cctx = canvas.getContext("2d");
+  cctx.setTransform(dpr,0,0,dpr,0,0);
+
+  if (!transparent){
+    const bgFill = bgRect ? bgRect.getAttribute("fill") : "#000";
+    cctx.fillStyle = bgFill || "#000";
+    cctx.fillRect(0,0,w,h);
+  }
+
+  cctx.drawImage(img, 0, 0, w, h);
+  return canvas;
+}
+
+async function savePNG(){
+  const canvas = await svgToCanvas({transparent:true});
+  const dataUrl = canvas.toDataURL("image/png");
+  downloadDataUrl(dataUrl, "beaded-text.png");
+}
+
+async function saveJPG(){
+  const canvas = await svgToCanvas({transparent:false});
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  downloadDataUrl(dataUrl, "beaded-text.jpg");
+}
+
+pngBtn.addEventListener("click", savePNG);
+jpgBtn.addEventListener("click", saveJPG);
+
+  </script>
+</body>
+</html>
